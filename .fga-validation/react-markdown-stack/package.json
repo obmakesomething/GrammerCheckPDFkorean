@@ -4,6 +4,7 @@
   "private": true,
   "description": "Packages the public markdown rendering dependency stack only. No private FGA source, schema, case identity, contract, prediction, or result is included.",
   "license": "UNLICENSED",
+  "fgaValidationRun": "2026-08-22",
   "dependencies": {
     "react": "19.0.0",
     "react-dom": "19.0.0",
