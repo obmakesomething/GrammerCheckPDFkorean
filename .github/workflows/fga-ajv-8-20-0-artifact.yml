@@ -1,0 +1,100 @@
+name: FGA Ajv 8.20.0 artifact
+
+on:
+  push:
+    branches:
+      - validation/fga-ajv-8.20.0-runner
+    paths:
+      - .fga-validation/**
+      - .github/workflows/fga-ajv-8-20-0-artifact.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fga-ajv-8-20-0-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package-ajv:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: .fga-validation
+
+    steps:
+      - name: Checkout public runner repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: .fga-validation/package-lock.json
+
+      - name: Install exact public dependency
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Verify resolved package identity
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { readFile, writeFile } from 'node:fs/promises';
+          import { createRequire } from 'node:module';
+
+          const require = createRequire(import.meta.url);
+          const pkg = require('ajv/package.json');
+          assert.equal(pkg.version, '8.20.0');
+
+          const lockBytes = await readFile('package-lock.json');
+          const lock = JSON.parse(lockBytes);
+          assert.equal(lock.packages['node_modules/ajv'].version, '8.20.0');
+          assert.equal(
+            lock.packages['node_modules/ajv'].resolved,
+            'https://registry.npmjs.org/ajv/-/ajv-8.20.0.tgz',
+          );
+          assert.equal(
+            lock.packages['node_modules/ajv'].integrity,
+            'sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==',
+          );
+
+          const receipt = {
+            schema: 'fga-public-dependency-artifact-receipt-v1',
+            repository: process.env.GITHUB_REPOSITORY,
+            commitSha: process.env.GITHUB_SHA,
+            workflowRunId: process.env.GITHUB_RUN_ID,
+            nodeVersion: process.version,
+            ajvVersion: pkg.version,
+            resolved: lock.packages['node_modules/ajv'].resolved,
+            integrity: lock.packages['node_modules/ajv'].integrity,
+            packageLockSha256: createHash('sha256').update(lockBytes).digest('hex'),
+            containsPrivateFgaSource: false,
+            generatedAt: new Date().toISOString(),
+          };
+          await writeFile('receipt.json', `${JSON.stringify(receipt, null, 2)}\n`);
+          console.log(JSON.stringify(receipt));
+          NODE
+
+      - name: Package installed dependency tree
+        run: |
+          tar -czf ajv-8.20.0-node-modules.tgz \
+            package.json \
+            package-lock.json \
+            receipt.json \
+            node_modules
+          sha256sum ajv-8.20.0-node-modules.tgz > ajv-8.20.0-node-modules.tgz.sha256
+
+      - name: Upload immutable dependency artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ajv-8.20.0-node-modules-${{ github.sha }}
+          path: |
+            .fga-validation/ajv-8.20.0-node-modules.tgz
+            .fga-validation/ajv-8.20.0-node-modules.tgz.sha256
+            .fga-validation/receipt.json
+          if-no-files-found: error
+          retention-days: 7
