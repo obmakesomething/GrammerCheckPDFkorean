@@ -7,6 +7,12 @@ on:
     paths:
       - .fga-validation/**
       - .github/workflows/fga-ajv-8-20-0-artifact.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .fga-validation/**
+      - .github/workflows/fga-ajv-8-20-0-artifact.yml
   workflow_dispatch:
 
 permissions:
@@ -32,8 +38,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: .fga-validation/package-lock.json
 
       - name: Install exact public dependency
         run: npm install --ignore-scripts --no-audit --no-fund
