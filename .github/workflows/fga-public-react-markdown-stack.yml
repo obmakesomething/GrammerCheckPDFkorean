@@ -24,8 +24,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: .fga-validation/react-markdown-stack/package-lock.json
       - name: Install exact public dependencies
         working-directory: .fga-validation/react-markdown-stack
         run: npm install --package-lock-only --ignore-scripts && npm ci --ignore-scripts
