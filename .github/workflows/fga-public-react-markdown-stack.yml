@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - validation/react-markdown-stack-runner-20260822
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/fga-public-react-markdown-stack.yml
+      - .fga-validation/react-markdown-stack/**
   workflow_dispatch:
 
 permissions:
