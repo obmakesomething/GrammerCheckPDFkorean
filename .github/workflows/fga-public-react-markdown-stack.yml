@@ -1,0 +1,53 @@
+name: FGA public React Markdown stack artifact
+
+on:
+  push:
+    branches:
+      - validation/react-markdown-stack-runner-20260822
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package-public-dependencies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: .fga-validation/react-markdown-stack/package-lock.json
+      - name: Install exact public dependencies
+        working-directory: .fga-validation/react-markdown-stack
+        run: npm install --package-lock-only --ignore-scripts && npm ci --ignore-scripts
+      - name: Verify package identities
+        working-directory: .fga-validation/react-markdown-stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const packages = ['react','react-dom','react-markdown','remark-breaks','remark-gfm'];
+          const receipt = { node: process.version, packages: {} };
+          for (const name of packages) {
+            const pkg = JSON.parse(fs.readFileSync(path.join('node_modules', name, 'package.json'), 'utf8'));
+            receipt.packages[name] = { version: pkg.version };
+          }
+          fs.writeFileSync('DEPENDENCY_RECEIPT.json', JSON.stringify(receipt, null, 2) + '\n');
+          NODE
+          tar --sort=name --mtime='UTC 2026-08-22' --owner=0 --group=0 --numeric-owner -czf react-markdown-stack-node-modules.tar.gz node_modules package.json package-lock.json DEPENDENCY_RECEIPT.json
+          sha256sum react-markdown-stack-node-modules.tar.gz package.json package-lock.json DEPENDENCY_RECEIPT.json > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: react-markdown-stack-${{ github.sha }}
+          path: |
+            .fga-validation/react-markdown-stack/react-markdown-stack-node-modules.tar.gz
+            .fga-validation/react-markdown-stack/SHA256SUMS
+            .fga-validation/react-markdown-stack/DEPENDENCY_RECEIPT.json
+            .fga-validation/react-markdown-stack/package-lock.json
+          retention-days: 7
+          if-no-files-found: error
