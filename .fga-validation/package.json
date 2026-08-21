@@ -1,0 +1,10 @@
+{
+  "name": "fga-ajv-8-20-0-artifact-runner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Temporary public Actions runner that packages the public Ajv 8.20.0 dependency only. No private FGA source or schema is included.",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "ajv": "8.20.0"
+  }
+}
